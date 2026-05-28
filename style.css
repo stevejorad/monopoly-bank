@@ -621,3 +621,60 @@ body {
   margin: 0 auto;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Bankruptcy button ────────────────────────────────────────── */
+
+.btn-bankruptcy {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  -webkit-tap-highlight-color: transparent;
+  animation: bankruptcyPulse 1.5s infinite;
+}
+@keyframes bankruptcyPulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .8; transform: scale(1.04); }
+}
+
+/* ── Bankruptcy overlay ───────────────────────────────────────── */
+
+.bankruptcy-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  animation: popIn .2s ease-out;
+}
+
+.bankruptcy-gif {
+  width: min(340px, 90vw);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+}
+
+.bankruptcy-name {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 var(--gold-dark);
+  text-align: center;
+}
+
+.bankruptcy-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,.75);
+  font-weight: 600;
+}
+
+.bankruptcy-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,.3);
+  margin-top: 4px;
+}

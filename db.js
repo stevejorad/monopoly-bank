@@ -69,6 +69,13 @@ const DB = {
     if (error) throw error;
   },
 
+  async declareBankruptcy(playerId) {
+    const { error } = await _db.from('players')
+      .update({ is_active: false, balance: 0 })
+      .eq('id', playerId);
+    if (error) throw error;
+  },
+
   async setTurnOrder(players) {
     await Promise.all(
       players.map(p => _db.from('players').update({ turn_order: p.turn_order }).eq('id', p.id))

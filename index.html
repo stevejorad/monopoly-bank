@@ -85,6 +85,7 @@
       <div id="my-name" class="pname">—</div>
       <div id="my-balance" class="amount">$—</div>
       <div id="turn-badge" class="turn-badge" style="display:none">🎲 Your Turn</div>
+      <button id="btn-bankruptcy" class="btn-bankruptcy" style="display:none">💸 Declare Bankruptcy</button>
     </div>
 
     <!-- Live scoreboard strip -->
@@ -177,6 +178,16 @@
         <button id="btn-deny" class="btn btn-danger" style="margin:0">✗ Deny</button>
       </div>
       <button id="btn-close-approval" class="btn-ghost" style="display:none;margin-top:8px;margin-bottom:0">Close</button>
+    </div>
+  </div>
+
+  <!-- ══ Overlay: Bankruptcy ═══════════════════════════════════ -->
+  <div id="overlay-bankruptcy" class="overlay" style="flex-direction:column;background:rgba(0,0,0,.92);cursor:pointer" onclick="this.classList.remove('active')">
+    <div class="bankruptcy-inner">
+      <img id="bankruptcy-gif" src="https://media.tenor.com/cFkWyTGUHwQAAAAd/the-office-michael-scott.gif" alt="I declare bankruptcy!" class="bankruptcy-gif">
+      <div id="bankruptcy-name" class="bankruptcy-name"></div>
+      <div class="bankruptcy-sub">has declared bankruptcy</div>
+      <div class="bankruptcy-hint">tap to dismiss</div>
     </div>
   </div>
 

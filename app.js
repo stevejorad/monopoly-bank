@@ -232,6 +232,10 @@ function renderGame() {
   $('turn-badge').style.display  = isMyTurn ? 'inline-flex' : 'none';
   $('turn-card').style.display   = isMyTurn ? 'block' : 'none';
 
+  // Bankruptcy button — show when broke
+  const broke = player.balance <= 0;
+  $('btn-bankruptcy').style.display = broke ? 'inline-block' : 'none';
+
   $('last-roll').textContent = (isMyTurn && S.lastRoll?.player_id === S.myPlayerId)
     ? `Last roll: ${S.lastRoll.die1} + ${S.lastRoll.die2} = ${S.lastRoll.die1 + S.lastRoll.die2}`
     : '';
@@ -400,6 +404,38 @@ async function applyBalances(txn, players) {
   }
 
   await Promise.all(updates);
+}
+
+// ── Bankruptcy ───────────────────────────────────────────────
+
+$('btn-bankruptcy').addEventListener('click', async () => {
+  if (!confirm('Declare bankruptcy and leave the game?')) return;
+  $('btn-bankruptcy').disabled = true;
+  try {
+    // If it's my turn, advance to next player first
+    if (S.game?.current_turn_id === S.myPlayerId) {
+      const sorted = active().filter(p => p.id !== S.myPlayerId).sort((a, b) => a.turn_order - b.turn_order);
+      if (sorted.length) await DB.advanceTurn(S.gameId, sorted[0].id);
+    }
+    await DB.declareBankruptcy(S.myPlayerId);
+    // Show the GIF locally immediately; others see it via realtime
+    showBankruptcyOverlay(me()?.name ?? 'Someone');
+  } catch (e) {
+    console.error(e);
+    $('btn-bankruptcy').disabled = false;
+  }
+});
+
+function showBankruptcyOverlay(name) {
+  $('bankruptcy-name').textContent = name;
+  // Reload GIF by resetting src
+  const gif = $('bankruptcy-gif');
+  const src = gif.src;
+  gif.src = '';
+  gif.src = src;
+  $('overlay-bankruptcy').classList.add('active');
+  // Auto-dismiss after 6 seconds
+  setTimeout(() => $('overlay-bankruptcy').classList.remove('active'), 6000);
 }
 
 // ── Dice ──────────────────────────────────────────────────────
@@ -697,6 +733,13 @@ function subscribe() {
         S.players.push(payload.new);
       } else if (payload.eventType === 'UPDATE') {
         const idx = S.players.findIndex(p => p.id === payload.new.id);
+        const prev = idx >= 0 ? S.players[idx] : null;
+
+        // Bankruptcy: someone else just went inactive — show the GIF on their phone too
+        if (prev?.is_active && payload.new.is_active === false && payload.new.id !== S.myPlayerId) {
+          showBankruptcyOverlay(payload.new.name);
+        }
+
         if (idx >= 0) S.players[idx] = { ...S.players[idx], ...payload.new };
         else S.players.push(payload.new);
       }
