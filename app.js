@@ -240,6 +240,7 @@ function renderGame() {
     $('btn-roll').style.display     = canRoll ? 'flex' : 'none';
     $('btn-end-turn').style.display = (S.hasRolled && !lastWasDoubles) ? 'flex' : 'none';
     $('btn-roll').textContent       = (S.hasRolled && lastWasDoubles) ? '🎲 Roll Again (Doubles!)' : '🎲 Roll Dice';
+    $('btn-pass-go').style.display  = S.hasRolled ? 'block' : 'none';
   }
 
   // Bankruptcy button — show when broke
