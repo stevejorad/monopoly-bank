@@ -14,6 +14,7 @@ const S = {
   lastRoll:    null,
   channel:     null,
   approvalTxn: null,
+  hasRolled:   false,
 };
 
 // ── Utilities ─────────────────────────────────────────────────
@@ -232,6 +233,15 @@ function renderGame() {
   $('turn-badge').style.display  = isMyTurn ? 'inline-flex' : 'none';
   $('turn-card').style.display   = isMyTurn ? 'block' : 'none';
 
+  if (isMyTurn) {
+    const lastWasDoubles = S.lastRoll?.player_id === S.myPlayerId
+      && S.lastRoll?.die1 === S.lastRoll?.die2;
+    const canRoll = !S.hasRolled || lastWasDoubles;
+    $('btn-roll').style.display     = canRoll ? 'flex' : 'none';
+    $('btn-end-turn').style.display = (S.hasRolled && !lastWasDoubles) ? 'flex' : 'none';
+    $('btn-roll').textContent       = (S.hasRolled && lastWasDoubles) ? '🎲 Roll Again (Doubles!)' : '🎲 Roll Dice';
+  }
+
   // Bankruptcy button — show when broke
   const broke = player.balance <= 0;
   $('btn-bankruptcy').style.display = broke ? 'inline-block' : 'none';
@@ -412,10 +422,13 @@ $('btn-bankruptcy').addEventListener('click', async () => {
   if (!confirm('Declare bankruptcy and leave the game?')) return;
   $('btn-bankruptcy').disabled = true;
   try {
-    // If it's my turn, advance to next player first
+    // If it's my turn, pass it to the next active player
     if (S.game?.current_turn_id === S.myPlayerId) {
       const sorted = active().filter(p => p.id !== S.myPlayerId).sort((a, b) => a.turn_order - b.turn_order);
-      if (sorted.length) await DB.advanceTurn(S.gameId, sorted[0].id);
+      if (sorted.length) {
+        await DB.advanceTurn(S.gameId, sorted[0].id);
+        S.game = { ...S.game, current_turn_id: sorted[0].id };
+      }
     }
     await DB.declareBankruptcy(S.myPlayerId);
     // Show the GIF locally immediately; others see it via realtime
@@ -452,19 +465,28 @@ $('btn-roll').addEventListener('click', async () => {
 
   await animateDiceRoll(d1, d2, doubles, 'You');
   await DB.recordRoll(S.gameId, S.myPlayerId, d1, d2);
-  S.lastRoll = { game_id: S.gameId, player_id: S.myPlayerId, die1: d1, die2: d2 };
+  S.lastRoll  = { game_id: S.gameId, player_id: S.myPlayerId, die1: d1, die2: d2 };
+  S.hasRolled = true;
+  // Turn advances when player taps "End Turn" (or rolls again on doubles)
 
-  if (!doubles) {
+  $('btn-roll').disabled = false;
+  renderGame();
+});
+
+$('btn-end-turn').addEventListener('click', async () => {
+  if (S.game?.current_turn_id !== S.myPlayerId) return;
+  const btn = $('btn-end-turn');
+  btn.disabled = true;
+  try {
     const sorted = active().sort((a, b) => a.turn_order - b.turn_order);
     const myIdx  = sorted.findIndex(p => p.id === S.myPlayerId);
     const next   = sorted[(myIdx + 1) % sorted.length];
     await DB.advanceTurn(S.gameId, next.id);
-    S.game = { ...S.game, current_turn_id: next.id };
-  }
-
-  $('btn-roll').disabled    = false;
-  $('btn-pass-go').disabled = false;
-  renderGame();
+    S.game      = { ...S.game, current_turn_id: next.id };
+    S.hasRolled = false;
+    renderGame();
+  } catch (e) { console.error(e); }
+  btn.disabled = false;
 });
 
 $('btn-pass-go').addEventListener('click', async () => {
@@ -777,7 +799,12 @@ function subscribe() {
     },
 
     onGame: (payload) => {
+      const prevTurnId = S.game?.current_turn_id;
       S.game = { ...S.game, ...payload.new };
+      // Reset roll state when it becomes my turn
+      if (payload.new.current_turn_id === S.myPlayerId && prevTurnId !== S.myPlayerId) {
+        S.hasRolled = false;
+      }
       if (payload.new.status === 'active' && !$('screen-game').classList.contains('active')) {
         showScreen('screen-game');
       }
